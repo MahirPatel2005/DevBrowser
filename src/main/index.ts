@@ -5,6 +5,10 @@ import { validateEnvironment } from '../shared/env';
 import { PartitionManager } from './session/partition-manager';
 import { configureSecurityDirectives } from './security/cdp-security';
 import { registerIpcHandlers } from './bridge/ipc-handlers';
+import { OllamaClient } from './ai/ollama-client';
+import { CredentialVault } from './crypto/vault';
+import { PassiveSecurityAuditor } from './security/auditor';
+import { CDPNetworkInterceptor } from './network/cdp-interceptor';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,6 +28,10 @@ if (!gotTheLock) {
 
 let mainWindow: BrowserWindow | null = null;
 let partitionManager: PartitionManager | null = null;
+let ollamaClient: OllamaClient | null = null;
+let credentialVault: CredentialVault | null = null;
+let securityAuditor: PassiveSecurityAuditor | null = null;
+let cdpInterceptor: CDPNetworkInterceptor | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   mainWindow = new BrowserWindow({
@@ -42,6 +50,11 @@ async function createWindow(): Promise<BrowserWindow> {
       webviewTag: true
     }
   });
+
+  // Attach CDP interceptor to track network frames & passive security
+  if (cdpInterceptor) {
+    cdpInterceptor.attachToWebContents(mainWindow.webContents, 'tab-init-1');
+  }
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   if (devServerUrl) {
@@ -62,8 +75,13 @@ app.whenReady().then(async () => {
   console.log(`[DevBrowser] Launching with environment: ${envConfig.NODE_ENV}`);
 
   partitionManager = new PartitionManager();
+  ollamaClient = new OllamaClient(envConfig.OLLAMA_HOST, envConfig.DEFAULT_AI_MODEL);
+  credentialVault = new CredentialVault();
+  securityAuditor = new PassiveSecurityAuditor();
+  cdpInterceptor = new CDPNetworkInterceptor(securityAuditor);
+
   configureSecurityDirectives();
-  registerIpcHandlers(partitionManager);
+  registerIpcHandlers(partitionManager, ollamaClient, credentialVault, securityAuditor);
 
   await createWindow();
 });

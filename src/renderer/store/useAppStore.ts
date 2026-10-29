@@ -61,6 +61,7 @@ interface AppState {
   setNetworkSearchQuery: (query: string) => void;
   setNetworkFilter: (filter: string) => void;
   clearTransactions: () => void;
+  addTransaction: (tx: NetworkTransaction) => void;
 
   // API Client
   activeRequest: ApiRequestDraft;
@@ -80,6 +81,7 @@ interface AppState {
   setSelectedFindingId: (id: string | null) => void;
   setSecuritySeverityFilter: (filter: string) => void;
   dismissFinding: (id: string) => void;
+  setFindings: (findings: SecurityFinding[]) => void;
 
   // Dependencies Graph
   graphNodes: IGraphNode[];
@@ -420,6 +422,15 @@ export const useAppStore = create<AppState>((set, get) => {
       set({ transactions: [], selectedTransactionId: null });
       get().addToast({ type: 'info', title: 'Network Log Cleared' });
     },
+    addTransaction: (tx) => {
+      set(state => {
+        const exists = state.transactions.some(t => t.id === tx.id);
+        const updated = exists
+          ? state.transactions.map(t => t.id === tx.id ? tx : t)
+          : [tx, ...state.transactions.slice(0, 199)];
+        return { transactions: updated };
+      });
+    },
 
     // API Client
     activeRequest: {
@@ -546,6 +557,7 @@ export const useAppStore = create<AppState>((set, get) => {
       }));
       get().addToast({ type: 'info', title: 'Finding Suppressed' });
     },
+    setFindings: (findings) => set({ findings }),
 
     // Graph
     graphNodes: initialNodes,
@@ -598,7 +610,39 @@ export const useAppStore = create<AppState>((set, get) => {
         isAiGenerating: true
       }));
 
-      // Simulate local processing delay
+      try {
+        if (window.devBrowserAPI?.ai) {
+          const selectedTx = get().selectedTransactionId
+            ? get().transactions.find(t => t.id === get().selectedTransactionId)
+            : undefined;
+
+          const res = await window.devBrowserAPI.ai.executeDiagnosis({
+            errorMessage: promptText,
+            consoleLogs: [],
+            failedRequestUrl: selectedTx?.url,
+            failedResponseStatus: selectedTx?.statusCode,
+            failedResponseBody: selectedTx?.responseBody
+          });
+
+          const assistantMsg: ChatMessage = {
+            id: `ai-${Date.now()}`,
+            sender: 'assistant',
+            text: res.diagnosis,
+            diff: res.suggestedDiff ? res.suggestedDiff.unifiedDiff : undefined,
+            timestamp: Date.now()
+          };
+
+          set(state => ({
+            aiMessages: [...state.aiMessages, assistantMsg],
+            isAiGenerating: false
+          }));
+          return;
+        }
+      } catch (err) {
+        console.warn('[AI] Local inference error, using fallback:', err);
+      }
+
+      // Offline / browser fallback
       setTimeout(() => {
         let responseText = '';
         let diff: string | undefined = undefined;
@@ -625,7 +669,7 @@ export const useAppStore = create<AppState>((set, get) => {
           aiMessages: [...state.aiMessages, assistantMsg],
           isAiGenerating: false
         }));
-      }, 800);
+      }, 600);
     },
     checkOllama: async () => {
       if (window.devBrowserAPI) {

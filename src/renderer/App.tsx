@@ -26,10 +26,30 @@ export const App: React.FC = () => {
   const activeTabId = useAppStore(s => s.activeTabId);
 
   useEffect(() => {
-    // 1. Initial IPC checks
+    let unsubscribeNetwork: (() => void) | undefined;
+    let metricsInterval: NodeJS.Timeout | undefined;
+
+    // 1. Initial IPC checks & subscriptions
     if (window.devBrowserAPI) {
       window.devBrowserAPI.system.getHardwareMetrics().then(setHardwareMetrics).catch(console.error);
       checkOllama();
+
+      // Poll hardware metrics every 8 seconds
+      metricsInterval = setInterval(() => {
+        window.devBrowserAPI?.system.getHardwareMetrics().then(setHardwareMetrics).catch(console.error);
+      }, 8000);
+
+      // Subscribe to live CDP network stream
+      unsubscribeNetwork = window.devBrowserAPI.network.onStreamTransaction((tx) => {
+        useAppStore.getState().addTransaction(tx);
+
+        // Fetch refreshed security audit findings
+        window.devBrowserAPI?.security.getFindings().then(findings => {
+          if (findings && findings.length > 0) {
+            useAppStore.getState().setFindings(findings);
+          }
+        }).catch(console.error);
+      });
     }
 
     // 2. Global Keyboard Shortcuts Listener
@@ -91,7 +111,11 @@ export const App: React.FC = () => {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      if (metricsInterval) clearInterval(metricsInterval);
+      if (unsubscribeNetwork) unsubscribeNetwork();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [activeTabId, checkOllama, closeTab, createNewTab, setActiveView, setCommandPaletteOpen, setHardwareMetrics, setShortcutsModalOpen]);
 
   const renderActiveView = () => {

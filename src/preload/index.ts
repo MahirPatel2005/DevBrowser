@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from '../shared/ipc-channels';
 import type { DevBrowserAPI } from './api';
+import type { AIDebugContext } from '../shared/domain/ai';
+import type { NetworkTransaction } from '../shared/domain/network';
 
 const devBrowserAPI: DevBrowserAPI = {
   system: {
@@ -16,6 +18,19 @@ const devBrowserAPI: DevBrowserAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.TABS_NAVIGATE, { tabId, url }),
     getPartitions: () =>
       ipcRenderer.invoke(IPC_CHANNELS.TABS_LIST)
+  },
+  network: {
+    onStreamTransaction: (callback: (tx: NetworkTransaction) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, tx: NetworkTransaction) => callback(tx);
+      ipcRenderer.on(IPC_CHANNELS.NETWORK_STREAM_TRANSACTION, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.NETWORK_STREAM_TRANSACTION, listener);
+      };
+    }
+  },
+  ai: {
+    executeDiagnosis: (context: AIDebugContext) =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_EXECUTE_DIAGNOSIS, { context })
   },
   security: {
     getFindings: () => ipcRenderer.invoke(IPC_CHANNELS.SECURITY_GET_FINDINGS),

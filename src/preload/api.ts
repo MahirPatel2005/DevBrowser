@@ -9,7 +9,8 @@ export interface DevBrowserAPI {
   system: {
     getHardwareMetrics: () => Promise<HardwareMetrics>;
     checkOllamaStatus: () => Promise<{ ok: boolean; model: string; message?: string }>;
-    checkTigerGraphStatus: (endpoint?: string) => Promise<{ ok: boolean; message: string; statusCode?: number }>;
+    checkTigerGraphStatus: (config?: { endpoint?: string; secret?: string; graphName?: string }) => Promise<{ ok: boolean; message: string; statusCode?: number; providerType?: string }>;
+    executeTigerGraphQuery: (args: { endpoint: string; queryPath: string; method?: 'GET' | 'POST'; secret?: string; body?: unknown }) => Promise<{ ok: boolean; data: unknown; status: number; durationMs: number; error?: string }>;
   };
   tabs: {
     createTab: (url: string, partitionKey?: string) => Promise<BrowserTab>;

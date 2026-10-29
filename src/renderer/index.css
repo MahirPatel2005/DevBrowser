@@ -143,3 +143,54 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   justify-content: center;
   z-index: 1000;
 }
+
+/* Dynamic Graph Animations & Visual Excellence */
+@keyframes flowDash {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.graph-edge-flow {
+  animation: flowDash 1.2s linear infinite;
+}
+
+@keyframes pulseGlowAmber {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(245, 158, 11, 1));
+    transform: scale(1.02);
+  }
+}
+
+@keyframes pulseGlowRed {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.8));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(239, 68, 68, 1));
+    transform: scale(1.03);
+  }
+}
+
+.node-blast-affected {
+  animation: pulseGlowRed 1.8s ease-in-out infinite;
+}
+
+.node-blast-root {
+  animation: pulseGlowAmber 1.4s ease-in-out infinite;
+}
+
+.graph-grid-bg {
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+

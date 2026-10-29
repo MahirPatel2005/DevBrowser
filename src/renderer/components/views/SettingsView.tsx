@@ -7,7 +7,9 @@ import {
   Flame, 
   Key, 
   Volume2, 
-  RefreshCw 
+  RefreshCw,
+  Cloud,
+  ExternalLink
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Badge } from '../common/Badge';
@@ -20,6 +22,9 @@ export const SettingsView: React.FC = () => {
   const tigerGraphEndpoint = useAppStore(s => s.tigerGraphEndpoint);
   const tigerGraphSecret = useAppStore(s => s.tigerGraphSecret);
   const tigerGraphStatus = useAppStore(s => s.tigerGraphStatus);
+  const tigerGraphName = useAppStore(s => s.tigerGraphName);
+  const tigerGraphProviderType = useAppStore(s => s.tigerGraphProviderType);
+  const tigerGraphMode = useAppStore(s => s.tigerGraphMode);
   const setSetting = useAppStore(s => s.setSetting);
   const triggerNuclearShred = useAppStore(s => s.triggerNuclearShred);
   const checkOllama = useAppStore(s => s.checkOllama);
@@ -45,7 +50,11 @@ export const SettingsView: React.FC = () => {
     setIsTestingTigerGraph(true);
     try {
       if (window.devBrowserAPI?.system) {
-        const res = await window.devBrowserAPI.system.checkTigerGraphStatus(tigerGraphEndpoint);
+        const res = await window.devBrowserAPI.system.checkTigerGraphStatus({
+          endpoint: tigerGraphEndpoint,
+          secret: tigerGraphSecret,
+          graphName: tigerGraphName
+        });
         setIsTestingTigerGraph(false);
         setSetting('tigerGraphStatus', res.ok ? 'connected' : 'disconnected');
         addToast({
@@ -339,84 +348,230 @@ export const SettingsView: React.FC = () => {
                 </p>
               </div>
 
-              {/* TigerGraph Card */}
+              {/* TigerGraph & TGCloud Card */}
               <div style={{
                 background: 'var(--bg-secondary)',
                 border: '1px solid var(--border-medium)',
                 borderRadius: '8px',
-                padding: '16px',
+                padding: '18px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '12px'
+                gap: '14px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Share2 size={18} color="var(--accent-cyan)" />
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      TigerGraph REST++ Provider
+                    <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      TigerGraph & TGCloud Integration
                     </span>
                   </div>
 
                   <Badge
-                    label={tigerGraphStatus === 'connected' ? 'Connected' : 'Disconnected (Using In-Memory Fallback)'}
+                    label={tigerGraphStatus === 'connected' ? 'Connected' : 'Disconnected (In-Memory Fallback)'}
                     variant={tigerGraphStatus === 'connected' ? 'success' : 'warning'}
                   />
                 </div>
 
+                {/* Provider Preset Selector */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      setSetting('tigerGraphProviderType', 'tgcloud');
+                      if (tigerGraphEndpoint.includes('127.0.0.1') || !tigerGraphEndpoint) {
+                        setSetting('tigerGraphEndpoint', 'https://my-subdomain.i.tgcloud.io');
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${tigerGraphProviderType === 'tgcloud' ? 'var(--accent-cyan)' : 'var(--border-medium)'}`,
+                      background: tigerGraphProviderType === 'tgcloud' ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-surface)',
+                      color: tigerGraphProviderType === 'tgcloud' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Cloud size={14} />
+                    TigerGraph Cloud (tgcloud.io)
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSetting('tigerGraphProviderType', 'local');
+                      if (tigerGraphEndpoint.includes('tgcloud.io') || !tigerGraphEndpoint) {
+                        setSetting('tigerGraphEndpoint', 'http://127.0.0.1:9000');
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${tigerGraphProviderType === 'local' ? 'var(--accent-cyan)' : 'var(--border-medium)'}`,
+                      background: tigerGraphProviderType === 'local' ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-surface)',
+                      color: tigerGraphProviderType === 'local' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Database size={14} />
+                    Local Docker / Self-Hosted
+                  </button>
+                </div>
+
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                  Connects to TigerGraph via native REST++ endpoints: <code>POST /restpp/graph/{'{graph_name}'}</code> for batch mutations and <code>POST /restpp/v1/requesttoken</code> for auth.
+                  {tigerGraphProviderType === 'tgcloud'
+                    ? 'TigerGraph Cloud (TGCloud) manages licensing and cluster hosting automatically. Connect via your TGCloud HTTPS subdomain and API token with zero local container RAM overhead.'
+                    : 'Connects to a self-hosted TigerGraph instance via port 9000 (REST++) and port 14240 (GraphStudio). Requires a valid license key inside Docker.'}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
+                {/* Configuration Inputs */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                      {tigerGraphProviderType === 'tgcloud' ? 'TGCloud Host URL' : 'REST++ Endpoint URL'}
+                    </label>
+                    <input
+                      type="text"
+                      value={tigerGraphEndpoint}
+                      onChange={e => setSetting('tigerGraphEndpoint', e.target.value)}
+                      placeholder={tigerGraphProviderType === 'tgcloud' ? 'https://my-subdomain.i.tgcloud.io' : 'http://127.0.0.1:9000'}
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-primary)',
+                        border: '1px solid var(--border-medium)',
+                        borderRadius: '6px',
+                        padding: '7px 10px',
+                        color: 'var(--text-primary)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '12px'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                      Graph Name
+                    </label>
+                    <input
+                      type="text"
+                      value={tigerGraphName}
+                      onChange={e => setSetting('tigerGraphName', e.target.value)}
+                      placeholder="MyGraph"
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-primary)',
+                        border: '1px solid var(--border-medium)',
+                        borderRadius: '6px',
+                        padding: '7px 10px',
+                        color: 'var(--text-primary)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '12px'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                      API Secret / Token
+                    </label>
+                    <input
+                      type="password"
+                      value={tigerGraphSecret}
+                      onChange={e => setSetting('tigerGraphSecret', e.target.value)}
+                      placeholder="Bearer token or secret"
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-primary)',
+                        border: '1px solid var(--border-medium)',
+                        borderRadius: '6px',
+                        padding: '7px 10px',
+                        color: 'var(--text-primary)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '12px'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Strict TigerGraph Mode Toggle */}
+                <div style={{
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '6px',
+                  padding: '10px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Strict TigerGraph Only Mode
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      Source graph views exclusively from TigerGraph REST++. Disables in-memory simulation fallbacks.
+                    </div>
+                  </div>
+
                   <input
-                    type="text"
-                    value={tigerGraphEndpoint}
-                    onChange={e => setSetting('tigerGraphEndpoint', e.target.value)}
-                    placeholder="http://127.0.0.1:9000 or TigerGraph Cloud URL"
-                    style={{
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--border-medium)',
-                      borderRadius: '6px',
-                      padding: '6px 10px',
-                      color: 'var(--text-primary)',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <input
-                    type="password"
-                    value={tigerGraphSecret}
-                    onChange={e => setSetting('tigerGraphSecret', e.target.value)}
-                    placeholder="API Secret / Token"
-                    style={{
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--border-medium)',
-                      borderRadius: '6px',
-                      padding: '6px 10px',
-                      color: 'var(--text-primary)',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '12px'
-                    }}
+                    type="checkbox"
+                    checked={tigerGraphMode === 'tigergraph-only'}
+                    onChange={e => setSetting('tigerGraphMode', e.target.checked ? 'tigergraph-only' : 'hybrid')}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                   />
                 </div>
 
-                <button
-                  onClick={handleTestTigerGraph}
-                  disabled={isTestingTigerGraph}
-                  style={{
-                    alignSelf: 'flex-start',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-medium)',
-                    color: 'var(--text-primary)',
-                    borderRadius: '5px',
-                    padding: '4px 12px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {isTestingTigerGraph ? 'Testing REST++ Endpoint...' : 'Test TigerGraph Connection'}
-                </button>
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <button
+                    onClick={handleTestTigerGraph}
+                    disabled={isTestingTigerGraph}
+                    style={{
+                      background: 'var(--accent-cyan)',
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: '5px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: isTestingTigerGraph ? 'wait' : 'pointer'
+                    }}
+                  >
+                    {isTestingTigerGraph ? 'Testing Endpoint...' : 'Test TigerGraph Connection'}
+                  </button>
+
+                  <a
+                    href={tigerGraphEndpoint.includes('tgcloud.io') ? tigerGraphEndpoint : 'http://127.0.0.1:14240'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-medium)',
+                      color: 'var(--text-secondary)',
+                      borderRadius: '5px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <ExternalLink size={13} />
+                    Open GraphStudio Console
+                  </a>
+                </div>
               </div>
 
               {/* Wispr Flow Card */}

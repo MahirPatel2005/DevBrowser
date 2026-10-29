@@ -8,8 +8,10 @@ const devBrowserAPI: DevBrowserAPI = {
   system: {
     getHardwareMetrics: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_GET_HARDWARE_METRICS),
     checkOllamaStatus: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_CHECK_OLLAMA_STATUS),
-    checkTigerGraphStatus: (endpoint?: string) =>
-      ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_CHECK_TIGERGRAPH_STATUS, { endpoint })
+    checkTigerGraphStatus: (config?: { endpoint?: string; secret?: string; graphName?: string }) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_CHECK_TIGERGRAPH_STATUS, config),
+    executeTigerGraphQuery: (args: { endpoint: string; queryPath: string; method?: 'GET' | 'POST'; secret?: string; body?: unknown }) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TIGERGRAPH_EXECUTE_QUERY, args)
   },
   tabs: {
     createTab: (url: string, partitionKey?: string) =>

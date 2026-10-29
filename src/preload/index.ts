@@ -7,7 +7,9 @@ import type { NetworkTransaction } from '../shared/domain/network';
 const devBrowserAPI: DevBrowserAPI = {
   system: {
     getHardwareMetrics: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_GET_HARDWARE_METRICS),
-    checkOllamaStatus: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_CHECK_OLLAMA_STATUS)
+    checkOllamaStatus: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_CHECK_OLLAMA_STATUS),
+    checkTigerGraphStatus: (endpoint?: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_CHECK_TIGERGRAPH_STATUS, { endpoint })
   },
   tabs: {
     createTab: (url: string, partitionKey?: string) =>

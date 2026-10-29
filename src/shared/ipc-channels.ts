@@ -2,6 +2,7 @@ export const IPC_CHANNELS = {
   // System & Window
   SYSTEM_GET_HARDWARE_METRICS: 'devbrowser:system:getHardwareMetrics',
   SYSTEM_CHECK_OLLAMA_STATUS: 'devbrowser:system:checkOllamaStatus',
+  SYSTEM_CHECK_TIGERGRAPH_STATUS: 'devbrowser:system:checkTigerGraphStatus',
 
   // Browser Tabs & Partitions
   TABS_CREATE: 'devbrowser:tabs:create',

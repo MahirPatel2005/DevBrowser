@@ -41,17 +41,31 @@ export const SettingsView: React.FC = () => {
     });
   };
 
-  const handleTestTigerGraph = () => {
+  const handleTestTigerGraph = async () => {
     setIsTestingTigerGraph(true);
-    setTimeout(() => {
-      setIsTestingTigerGraph(false);
-      setSetting('tigerGraphStatus', 'disconnected');
-      addToast({
-        type: 'warning',
-        title: 'TigerGraph Connection Notice',
-        message: 'Endpoint unreachable. Using local In-Memory Graph Provider fallback.'
-      });
-    }, 600);
+    try {
+      if (window.devBrowserAPI?.system) {
+        const res = await window.devBrowserAPI.system.checkTigerGraphStatus(tigerGraphEndpoint);
+        setIsTestingTigerGraph(false);
+        setSetting('tigerGraphStatus', res.ok ? 'connected' : 'disconnected');
+        addToast({
+          type: res.ok ? 'success' : 'warning',
+          title: res.ok ? 'TigerGraph Connected' : 'TigerGraph Connection Notice',
+          message: res.message
+        });
+        return;
+      }
+    } catch (err) {
+      console.error('[TigerGraph] Health check error:', err);
+    }
+
+    setIsTestingTigerGraph(false);
+    setSetting('tigerGraphStatus', 'disconnected');
+    addToast({
+      type: 'warning',
+      title: 'TigerGraph Connection Notice',
+      message: 'Endpoint unreachable. Using local In-Memory Graph Provider fallback.'
+    });
   };
 
   return (

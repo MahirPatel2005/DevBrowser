@@ -9,6 +9,7 @@ export interface DevBrowserAPI {
   system: {
     getHardwareMetrics: () => Promise<HardwareMetrics>;
     checkOllamaStatus: () => Promise<{ ok: boolean; model: string; message?: string }>;
+    checkTigerGraphStatus: (endpoint?: string) => Promise<{ ok: boolean; message: string; statusCode?: number }>;
   };
   tabs: {
     createTab: (url: string, partitionKey?: string) => Promise<BrowserTab>;

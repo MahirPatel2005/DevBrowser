@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import os from 'node:os';
+import http from 'node:http';
 import { IPC_CHANNELS, type HardwareMetrics } from '../../shared/ipc-channels';
 import type { PartitionManager } from '../session/partition-manager';
 import type { BrowserTab } from '../../shared/domain/browser';
@@ -48,6 +49,60 @@ export function registerIpcHandlers(
         ? `Connected to local daemon with ${health.models.length} model(s)` 
         : 'Ollama daemon not reachable on http://127.0.0.1:11434'
     };
+  });
+
+  // 3. TigerGraph live REST++ health probe
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_CHECK_TIGERGRAPH_STATUS, async (_event, args?: { endpoint?: string }) => {
+    const rawEndpoint = args?.endpoint || 'http://127.0.0.1:9000';
+    return new Promise((resolve) => {
+      try {
+        const url = new URL('/echo', rawEndpoint);
+        const req = http.get(url, { timeout: 3000 }, (res) => {
+          res.resume();
+          res.on('end', () => {
+            if (res.statusCode === 200) {
+              resolve({
+                ok: true,
+                statusCode: 200,
+                message: 'TigerGraph REST++ is online and ready (HTTP 200 OK)'
+              });
+            } else if (res.statusCode === 502) {
+              resolve({
+                ok: false,
+                statusCode: 502,
+                message: 'HTTP 502 Bad Gateway: NGINX is online, but RESTPP/GSE engines are warming up or waiting for license (gadmin license set).'
+              });
+            } else {
+              resolve({
+                ok: false,
+                statusCode: res.statusCode,
+                message: `TigerGraph returned HTTP ${res.statusCode}`
+              });
+            }
+          });
+        });
+
+        req.on('error', (err) => {
+          resolve({
+            ok: false,
+            message: `Connection error: ${err.message}. Ensure TigerGraph container is running on port 9000.`
+          });
+        });
+
+        req.on('timeout', () => {
+          req.destroy();
+          resolve({
+            ok: false,
+            message: 'TigerGraph connection timed out after 3000ms.'
+          });
+        });
+      } catch (err) {
+        resolve({
+          ok: false,
+          message: `Invalid TigerGraph endpoint URL: ${err instanceof Error ? err.message : String(err)}`
+        });
+      }
+    });
   });
 
   // 3. AI Execution & Diagnosis

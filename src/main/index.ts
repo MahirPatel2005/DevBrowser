@@ -12,19 +12,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
+  process.exit(0);
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
 }
 
 let mainWindow: BrowserWindow | null = null;
 let partitionManager: PartitionManager | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
-  const envConfig = validateEnvironment();
-  console.log(`[DevBrowser] Launching with environment: ${envConfig.NODE_ENV}`);
-
-  partitionManager = new PartitionManager();
-  configureSecurityDirectives();
-  registerIpcHandlers(partitionManager);
-
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 960,
@@ -56,7 +57,16 @@ async function createWindow(): Promise<BrowserWindow> {
   return mainWindow;
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  const envConfig = validateEnvironment();
+  console.log(`[DevBrowser] Launching with environment: ${envConfig.NODE_ENV}`);
+
+  partitionManager = new PartitionManager();
+  configureSecurityDirectives();
+  registerIpcHandlers(partitionManager);
+
+  await createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

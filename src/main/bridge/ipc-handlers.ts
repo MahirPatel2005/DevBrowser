@@ -7,7 +7,13 @@ import type { BrowserTab } from '../../shared/domain/browser';
 import type { SecurityFinding } from '../../shared/domain/security';
 import type { ShredResult } from '../../shared/domain/privacy';
 
+let handlersRegistered = false;
+
 export function registerIpcHandlers(partitionManager: PartitionManager): void {
+  if (handlersRegistered) {
+    return;
+  }
+  handlersRegistered = true;
   // 1. Hardware metrics
   ipcMain.handle(IPC_CHANNELS.SYSTEM_GET_HARDWARE_METRICS, async (): Promise<HardwareMetrics> => {
     const totalMem = os.totalmem();

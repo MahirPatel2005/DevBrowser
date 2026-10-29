@@ -67,20 +67,28 @@ export function registerIpcHandlers(
         headers['Authorization'] = `Bearer ${secret}`;
       }
 
-      let res: Response;
+      let res: Response | null = null;
       try {
-        res = await fetch(`${rawEndpoint}/echo`, {
-          signal: AbortSignal.timeout(4000),
-          headers
-        });
-      } catch {
         res = await fetch(`${rawEndpoint}/restpp/echo`, {
           signal: AbortSignal.timeout(4000),
           headers
         });
+      } catch {
+        // fallback to /echo
       }
 
-      if (res.status === 200) {
+      if (!res || res.status === 404) {
+        try {
+          res = await fetch(`${rawEndpoint}/echo`, {
+            signal: AbortSignal.timeout(4000),
+            headers
+          });
+        } catch {
+          // network error
+        }
+      }
+
+      if (res && res.status === 200) {
         return {
           ok: true,
           statusCode: 200,
@@ -89,23 +97,28 @@ export function registerIpcHandlers(
             ? `Connected to TigerGraph Cloud (${new URL(rawEndpoint).hostname})`
             : 'TigerGraph REST++ is online and ready (HTTP 200 OK)'
         };
-      } else if (res.status === 502) {
+      } else if (res && res.status === 502) {
         return {
           ok: false,
           statusCode: 502,
           message: 'HTTP 502 Bad Gateway: NGINX is online, but RESTPP/GSE engines are warming up or waiting for license (gadmin license set).'
         };
-      } else if (res.status === 401 || res.status === 403) {
+      } else if (res && (res.status === 401 || res.status === 403)) {
         return {
           ok: false,
           statusCode: res.status,
           message: `HTTP ${res.status} Authentication Failed. Check your TGCloud API Token or Secret.`
         };
-      } else {
+      } else if (res) {
         return {
           ok: false,
           statusCode: res.status,
           message: `TigerGraph returned HTTP ${res.status} ${res.statusText}`
+        };
+      } else {
+        return {
+          ok: false,
+          message: 'Could not reach TigerGraph endpoint. Verify host URL.'
         };
       }
     } catch (err: unknown) {

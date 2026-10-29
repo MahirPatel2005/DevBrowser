@@ -1,0 +1,38 @@
+export const IPC_CHANNELS = {
+  // System & Window
+  SYSTEM_GET_HARDWARE_METRICS: 'devbrowser:system:getHardwareMetrics',
+  SYSTEM_CHECK_OLLAMA_STATUS: 'devbrowser:system:checkOllamaStatus',
+
+  // Browser Tabs & Partitions
+  TABS_CREATE: 'devbrowser:tabs:create',
+  TABS_CLOSE: 'devbrowser:tabs:close',
+  TABS_NAVIGATE: 'devbrowser:tabs:navigate',
+  TABS_LIST: 'devbrowser:tabs:list',
+
+  // Network & CDP
+  NETWORK_STREAM_TRANSACTION: 'devbrowser:network:streamTransaction',
+  NETWORK_CLEAR_TRANSACTIONS: 'devbrowser:network:clearTransactions',
+
+  // API Client
+  API_CLIENT_SEND_REQUEST: 'devbrowser:apiClient:sendRequest',
+
+  // Security
+  SECURITY_GET_FINDINGS: 'devbrowser:security:getFindings',
+  SECURITY_CLEAR_FINDINGS: 'devbrowser:security:clearFindings',
+
+  // Local AI
+  AI_EXECUTE_DIAGNOSIS: 'devbrowser:ai:executeDiagnosis',
+
+  // Privacy & Shred
+  PRIVACY_TRIGGER_NUCLEAR_SHRED: 'devbrowser:privacy:triggerNuclearShred'
+} as const;
+
+export type IpcChannelName = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS];
+
+export interface HardwareMetrics {
+  totalUnifiedMemoryBytes: number;
+  freeUnifiedMemoryBytes: number;
+  appMemoryUsageBytes: number;
+  cpuArchitecture: string;
+  isAppleSilicon: boolean;
+}
